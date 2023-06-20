@@ -1,0 +1,108 @@
+
+
+// Vertex shader
+const vertexShaderSource = `
+attribute vec3 vertex;
+attribute vec3 normal;
+attribute vec2 texCoord;
+uniform vec3 lightPosition;
+uniform mat4 ModelViewMatrix, ProjectionMatrix, NormalMatrix;
+varying vec3 normalInterp;
+varying vec3 vertPos;
+varying vec3 lightPos;
+varying vec4 color;
+
+varying vec2 v_texcoord;
+
+uniform vec3 translateUP;
+uniform vec2 userPoint;
+uniform float rotA;
+varying float col;
+
+mat4 translation(float tx, float ty, float tz) {
+    mat4 dst;
+
+    dst[0][0] = 1.0;
+    dst[0][ 1] = 0.0;
+    dst[0][ 2] = 0.0;
+    dst[0][ 3] = 0.0;
+    dst[1][ 0] = 0.0;
+    dst[1][ 1] = 1.0;
+    dst[1][ 2] = 0.0;
+    dst[1][ 3] = 0.0;
+    dst[2][ 0] = 0.0;
+    dst[2][ 1] = 0.0;
+    dst[2][ 2] = 1.0;
+    dst[2][ 3] = 0.0;
+    dst[3][ 0] = tx;
+    dst[3][ 1] = ty;
+    dst[3][ 2] = tz;
+    dst[3][ 3] = 1.0;
+    return dst;
+  }
+
+mat4 rotation(float angleInRadians) {
+    mat4 dst;
+    float c = cos(angleInRadians);
+    float s = sin(angleInRadians);
+
+    dst[0][0] = c;
+    dst[0][ 1] = s;
+    dst[0][ 2] = 0.0;
+    dst[0][ 3] = 0.0;
+    dst[1][ 0] = -s;
+    dst[1][ 1] = c;
+    dst[1][ 2] = 0.0;
+    dst[1][ 3] = 0.0;
+    dst[2][ 0] = 0.0;
+    dst[2][ 1] = 0.0;
+    dst[2][ 2] = 1.0;
+    dst[2][ 3] = 0.0;
+    dst[3][ 0] = 0.0;
+    dst[3][ 1] = 0.0;
+    dst[3][ 2] = 0.0;
+    dst[3][ 3] = 1.0;
+
+    return dst;
+  }
+
+
+void main() {
+    mat4 rotate = rotation(rotA);
+    mat4 t = translation(userPoint.x,userPoint.y,0.0);
+    mat4 tt = translation(-userPoint.x,-userPoint.y,0.0);
+    vec4 textureTranslatedOnce = vec4(texCoord,0.0,0.0)*t;
+    vec4 textureRotated = textureTranslatedOnce*rotate;
+    vec4 textureTranslatedTwice = textureRotated*tt;
+    v_texcoord = vec2(textureTranslatedTwice.x,textureTranslatedTwice.y);
+    vec4 vertPos4 = ModelViewMatrix * vec4(vertex, 1.0);
+    gl_Position = ProjectionMatrix* vertPos4;
+    if(userPoint.x>0.0){
+      vec4 sphereLoc = translation(translateUP.x,translateUP.y,translateUP.z)*vec4(vertex,1.0);
+      gl_Position= ProjectionMatrix*sphereLoc;
+    }
+}`;
+
+
+// Fragment shader
+const fragmentShaderSource = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+   precision highp float;
+#else
+   precision mediump float;
+#endif
+
+varying vec4 color;
+varying vec2 v_texcoord;
+uniform sampler2D tmu;
+uniform vec2 userPoint;
+
+
+
+void main() {
+    vec4 texColor = texture2D(tmu, v_texcoord);
+    if(userPoint.x>0.0){
+       texColor= vec4(1.,1.,0.,0.);
+    }
+    gl_FragColor = texColor;
+}`;
